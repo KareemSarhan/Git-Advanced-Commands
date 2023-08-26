@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# This is a Git custom command script to synchronize local branches with their corresponding remote branches.
+
+# Create an associative array to store remote tracking information
+declare -A trackingMap
+
+# Loop through branches and populate the associative array
+while IFS=':' read -r localBranch trackingInfo; do
+    trackingMap["$localBranch"]="$trackingInfo"
+done < <(git for-each-ref --format='%(refname:short):%(upstream:short)' refs/heads)
+
+# Loop through local branches
+for localBranch in $(git branch --format='%(refname:short)' | grep -v '^[*+]'); do
+    trackingInfo=${trackingMap["$localBranch"]}
+    if [ -z "$trackingInfo" ]; then
+        continue
+    fi
+
+    # Parse remote repository and branch name
+    IFS='/' read -r remote remoteBranch <<< "$trackingInfo"
+
+    # Display information about the synchronization
+    echo "Synchronizing branch: $localBranch"
+    echo "Fetching changes from remote: $remote"
+    echo "Local branch: $localBranch, Remote branch: $remoteBranch"
+
+    # Fetch changes from the remote branch to the local branch
+    echo "Calling git fetch ${remote} ${localBranch}:${remoteBranch}"
+    git fetch "$remote" "$localBranch:$remoteBranch"
+
+    echo "Synchronization complete for branch: $localBranch"
+    echo
+done
+
+echo "All branches synchronized."

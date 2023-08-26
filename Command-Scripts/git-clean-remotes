@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# This script cleans up remote-tracking branches, ensuring that only the branches
+# being tracked locally are present in the remote-tracking branches list.
+
+for remote in $(git remote); do
+    echo "Processing remote: $remote"
+
+    # Get a list of local branches tracking this remote
+    tracked_branches=$(git for-each-ref --format '%(upstream:short)' $(git for-each-ref --format '%(refname:short)' refs/heads/) | grep ^$remote/)
+
+    # Iterate over each remote branch for this remote
+    for branch in $(git for-each-ref --format '%(refname:short)' refs/remotes/$remote/); do
+        # If the branch isn't in the list of tracked branches, delete it
+        if ! echo "$tracked_branches" | grep -q "^$branch$"; then
+            echo "Deleting $branch as it is not tracked locally..."
+            git branch -dr $branch
+        fi
+    done
+
+    echo "Done with $remote."
+    echo "-----------------------"
+done
+
+echo "Completed cleanup for all remotes."
