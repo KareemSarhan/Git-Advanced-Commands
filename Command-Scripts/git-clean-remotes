@@ -3,20 +3,24 @@
 # This script cleans up remote-tracking branches, ensuring that only the branches
 # being tracked locally are present in the remote-tracking branches list.
 
+# Create an associative array to store remote tracking information
+declare -A trackingMap
+
+# Loop through branches and populate the associative array
+while IFS=':' read -r localBranch trackingInfo; do
+    trackingMap["$localBranch"]="$trackingInfo"
+done < <(git for-each-ref --format='%(refname:short):%(upstream:short)' refs/heads)
+
 for remote in $(git remote); do
     echo "Processing remote: $remote"
 
-    # Get a list of all local branches
-    local_branches=$(git for-each-ref --format '%(refname:short)' refs/heads/)
-
-    # Initialize tracked_branches to empty
+    # Prepare an empty string for tracked branches
     tracked_branches=""
 
-    # For each local branch, get its upstream and filter those tracking the current remote
-    for local_branch in $local_branches; do
-        upstream=$(git for-each-ref --format '%(upstream:short)' refs/heads/$local_branch)
-        if [[ $upstream == $remote/* ]]; then
-            tracked_branches="$tracked_branches $upstream"
+    # Populate the tracked_branches string with branches tracking the current remote
+    for localBranch in "${!trackingMap[@]}"; do
+        if [[ ${trackingMap["$localBranch"]} == $remote/* ]]; then
+            tracked_branches="$tracked_branches ${trackingMap["$localBranch"]}"
         fi
     done
 
@@ -29,14 +33,14 @@ for remote in $(git remote); do
     # Iterate over each remote branch for this remote
     for branch in $(git for-each-ref --format '%(refname:short)' refs/remotes/$remote/); do
         # If the branch isn't in the list of tracked branches, delete it
-        if ! echo "$tracked_branches" | grep -q "^$branch$"; then
+        if ! echo "$tracked_branches" | grep -q -w "$branch"; then
             if [ "$delete_all_answer" = "y" ]; then
-                git branch -dr $branch
+                # git branch -dr $branch
             else
                 echo "$branch is not tracked locally. Do you want to delete it? (y/n)"
                 read individual_answer
                 if [ "$individual_answer" = "y" ]; then
-                    git branch -dr $branch
+                    # git branch -dr $branch
                     echo "$branch has been deleted."
                 else
                     echo "Skipping $branch..."
