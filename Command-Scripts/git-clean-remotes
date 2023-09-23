@@ -35,12 +35,12 @@ for remote in $(git remote); do
         # If the branch isn't in the list of tracked branches, delete it
         if ! echo "$tracked_branches" | grep -q -w "$branch"; then
             if [ "$delete_all_answer" = "y" ]; then
-                # git branch -dr $branch
+                git branch -dr $branch
             else
                 echo "$branch is not tracked locally. Do you want to delete it? (y/n)"
                 read individual_answer
                 if [ "$individual_answer" = "y" ]; then
-                    # git branch -dr $branch
+                    git branch -dr $branch
                     echo "$branch has been deleted."
                 else
                     echo "Skipping $branch..."
